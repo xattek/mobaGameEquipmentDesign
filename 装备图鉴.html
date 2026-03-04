@@ -1,0 +1,993 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>3D MOBA 装备图鉴 - 游戏设计文档</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --color-physical: #ff6b6b;
+            --color-magic: #4fc3f7;
+            --color-defense: #69f0ae;
+            --color-special: #ffd700;
+            --color-gold: #ffd700;
+        }
+
+        body {
+            font-family: 'Microsoft YaHei', 'Segoe UI', sans-serif;
+            background: linear-gradient(135deg, #0f0c29 0%, #302b63 50%, #24243e 100%);
+            min-height: 100vh;
+            color: #fff;
+            line-height: 1.6;
+        }
+
+        /* 头部 */
+        .header {
+            text-align: center;
+            padding: 40px 20px;
+            background: rgba(0,0,0,0.3);
+            border-bottom: 2px solid rgba(255,215,0,0.3);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .header::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='0.03'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
+            opacity: 0.5;
+        }
+
+        .header h1 {
+            font-size: 2.8em;
+            background: linear-gradient(45deg, #ffd700, #ff6b6b, #ffd700);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            margin-bottom: 10px;
+            position: relative;
+            z-index: 1;
+        }
+
+        .header p {
+            color: #aaa;
+            font-size: 1.2em;
+            position: relative;
+            z-index: 1;
+        }
+
+        .version-tag {
+            display: inline-block;
+            background: rgba(255,215,0,0.2);
+            border: 1px solid rgba(255,215,0,0.5);
+            padding: 5px 15px;
+            border-radius: 20px;
+            font-size: 0.9em;
+            color: #ffd700;
+            margin-top: 15px;
+        }
+
+        /* 容器 */
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        /* 控制栏 */
+        .control-bar {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 20px;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 30px;
+            padding: 20px;
+            background: rgba(255,255,255,0.05);
+            border-radius: 15px;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255,255,255,0.1);
+        }
+
+        .search-box {
+            flex: 1;
+            min-width: 250px;
+            padding: 12px 20px;
+            border: 1px solid rgba(255,255,255,0.2);
+            background: rgba(0,0,0,0.3);
+            border-radius: 25px;
+            color: #fff;
+            font-size: 16px;
+            outline: none;
+            transition: all 0.3s;
+        }
+
+        .search-box:focus {
+            border-color: #ffd700;
+            box-shadow: 0 0 15px rgba(255,215,0,0.3);
+        }
+
+        .search-box::placeholder {
+            color: #888;
+        }
+
+        .filter-group {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+
+        .filter-group label {
+            color: #ffd700;
+            font-weight: bold;
+        }
+
+        .filter-btn {
+            padding: 8px 16px;
+            border: 1px solid rgba(255,255,255,0.2);
+            background: rgba(255,255,255,0.1);
+            color: #fff;
+            border-radius: 20px;
+            cursor: pointer;
+            transition: all 0.3s;
+            font-size: 14px;
+        }
+
+        .filter-btn:hover, .filter-btn.active {
+            background: linear-gradient(45deg, #ffd700, #ff6b6b);
+            border-color: transparent;
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(255,215,0,0.3);
+        }
+
+        /* 等级标签 */
+        .tier-tabs {
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            margin-bottom: 40px;
+            flex-wrap: wrap;
+        }
+
+        .tier-tab {
+            padding: 15px 40px;
+            background: rgba(255,255,255,0.1);
+            border: 2px solid transparent;
+            border-radius: 30px;
+            cursor: pointer;
+            transition: all 0.3s;
+            font-size: 16px;
+            font-weight: bold;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .tier-tab::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
+            transition: left 0.5s;
+        }
+
+        .tier-tab:hover::before {
+            left: 100%;
+        }
+
+        .tier-tab:hover {
+            background: rgba(255,255,255,0.2);
+            transform: translateY(-2px);
+        }
+
+        .tier-tab.active {
+            border-color: #ffd700;
+            background: linear-gradient(45deg, rgba(255,215,0,0.2), rgba(255,107,107,0.2));
+            box-shadow: 0 0 20px rgba(255,215,0,0.3);
+        }
+
+        .tier-tab.tier-1 { color: #aaa; }
+        .tier-tab.tier-2 { color: #4fc3f7; }
+        .tier-tab.tier-3 { color: #ffd700; }
+
+        /* 统计信息 */
+        .stats-bar {
+            display: flex;
+            justify-content: center;
+            gap: 30px;
+            margin-bottom: 30px;
+            flex-wrap: wrap;
+        }
+
+        .stat-item {
+            text-align: center;
+            padding: 15px 30px;
+            background: rgba(255,255,255,0.05);
+            border-radius: 10px;
+            border: 1px solid rgba(255,255,255,0.1);
+        }
+
+        .stat-value {
+            font-size: 2em;
+            font-weight: bold;
+            color: #ffd700;
+        }
+
+        .stat-label {
+            color: #888;
+            font-size: 0.9em;
+        }
+
+        /* 分类标题 */
+        .category-title {
+            font-size: 1.6em;
+            color: #ffd700;
+            margin: 40px 0 25px;
+            padding-left: 20px;
+            border-left: 4px solid #ffd700;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .category-icon {
+            font-size: 1.4em;
+        }
+
+        /* 装备网格 */
+        .equipment-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+            gap: 25px;
+            margin-bottom: 50px;
+        }
+
+        /* 装备卡片 */
+        .equipment-card {
+            background: linear-gradient(145deg, rgba(30,30,50,0.95), rgba(20,20,40,0.95));
+            border-radius: 16px;
+            padding: 25px;
+            border: 1px solid rgba(255,255,255,0.1);
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+            cursor: pointer;
+        }
+
+        .equipment-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: linear-gradient(90deg, transparent, currentColor, transparent);
+            opacity: 0;
+            transition: opacity 0.3s;
+        }
+
+        .equipment-card:hover {
+            transform: translateY(-8px);
+            box-shadow: 0 15px 40px rgba(0,0,0,0.5);
+            border-color: currentColor;
+        }
+
+        .equipment-card:hover::before {
+            opacity: 1;
+        }
+
+        .equipment-card.physical { color: var(--color-physical); }
+        .equipment-card.magic { color: var(--color-magic); }
+        .equipment-card.defense { color: var(--color-defense); }
+        .equipment-card.special { color: var(--color-special); }
+
+        .card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 18px;
+        }
+
+        .equipment-name {
+            font-size: 1.25em;
+            font-weight: bold;
+            color: #fff;
+            flex: 1;
+            margin-right: 10px;
+        }
+
+        .equipment-price {
+            background: linear-gradient(45deg, #ffd700, #ff6b6b);
+            padding: 6px 14px;
+            border-radius: 20px;
+            font-weight: bold;
+            font-size: 0.95em;
+            color: #000;
+            white-space: nowrap;
+        }
+
+        .equipment-stats {
+            margin-bottom: 18px;
+        }
+
+        .stat-row {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin: 8px 0;
+            font-size: 0.95em;
+            color: #ddd;
+        }
+
+        .stat-icon {
+            width: 24px;
+            text-align: center;
+            font-size: 1.1em;
+        }
+
+        .equipment-passive {
+            background: rgba(255,255,255,0.05);
+            padding: 12px;
+            border-radius: 10px;
+            font-size: 0.88em;
+            color: #ccc;
+            border-left: 3px solid currentColor;
+            margin-bottom: 18px;
+            line-height: 1.5;
+        }
+
+        .equipment-passive strong {
+            color: #ffd700;
+        }
+
+        /* 合成路径 */
+        .crafting-path {
+            border-top: 1px solid rgba(255,255,255,0.1);
+            padding-top: 15px;
+        }
+
+        .crafting-title {
+            font-size: 0.85em;
+            color: #888;
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        .crafting-items {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+
+        .crafting-item {
+            background: rgba(255,255,255,0.1);
+            padding: 5px 12px;
+            border-radius: 15px;
+            font-size: 0.82em;
+            color: #aaa;
+            border: 1px solid rgba(255,255,255,0.1);
+            transition: all 0.2s;
+        }
+
+        .crafting-item:hover {
+            background: rgba(255,215,0,0.2);
+            border-color: rgba(255,215,0,0.5);
+            color: #ffd700;
+        }
+
+        /* 等级徽章 */
+        .tier-badge {
+            position: absolute;
+            top: 15px;
+            right: 15px;
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            font-size: 0.9em;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.3);
+        }
+
+        .tier-badge.tier-1 { background: linear-gradient(135deg, #666, #444); color: #fff; }
+        .tier-badge.tier-2 { background: linear-gradient(135deg, #4fc3f7, #0288d1); color: #fff; }
+        .tier-badge.tier-3 { background: linear-gradient(135deg, #ffd700, #ff6b6b); color: #000; }
+
+        /* 详情弹窗 */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.85);
+            z-index: 1000;
+            justify-content: center;
+            align-items: center;
+            backdrop-filter: blur(8px);
+            padding: 20px;
+        }
+
+        .modal.active {
+            display: flex;
+        }
+
+        .modal-content {
+            background: linear-gradient(145deg, #1a1a2e, #16213e);
+            border-radius: 24px;
+            padding: 35px;
+            max-width: 650px;
+            width: 100%;
+            max-height: 85vh;
+            overflow-y: auto;
+            border: 2px solid rgba(255,215,0,0.3);
+            position: relative;
+            box-shadow: 0 25px 50px rgba(0,0,0,0.5);
+        }
+
+        .modal-close {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            background: rgba(255,255,255,0.1);
+            border: 1px solid rgba(255,255,255,0.2);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5em;
+            cursor: pointer;
+            color: #888;
+            transition: all 0.3s;
+        }
+
+        .modal-close:hover {
+            background: rgba(255,107,107,0.3);
+            border-color: #ff6b6b;
+            color: #fff;
+            transform: rotate(90deg);
+        }
+
+        /* 页脚 */
+        .footer {
+            text-align: center;
+            padding: 40px 20px;
+            background: rgba(0,0,0,0.3);
+            border-top: 1px solid rgba(255,255,255,0.1);
+            margin-top: 50px;
+        }
+
+        .footer p {
+            color: #666;
+            font-size: 0.9em;
+        }
+
+        /* 空状态 */
+        .empty-state {
+            text-align: center;
+            padding: 60px 20px;
+            color: #666;
+        }
+
+        .empty-state-icon {
+            font-size: 4em;
+            margin-bottom: 20px;
+            opacity: 0.5;
+        }
+
+        /* 响应式 */
+        @media (max-width: 768px) {
+            .header h1 { font-size: 2em; }
+            .header p { font-size: 1em; }
+            .equipment-grid { grid-template-columns: 1fr; }
+            .control-bar { flex-direction: column; align-items: stretch; }
+            .filter-group { justify-content: center; }
+            .tier-tab { padding: 12px 25px; font-size: 14px; }
+            .stats-bar { gap: 15px; }
+            .stat-item { padding: 10px 20px; }
+            .modal-content { padding: 25px; }
+        }
+
+        /* 动画 */
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        @keyframes glow {
+            0%, 100% { box-shadow: 0 0 5px currentColor; }
+            50% { box-shadow: 0 0 25px currentColor, 0 0 35px currentColor; }
+        }
+
+        .equipment-card {
+            animation: fadeIn 0.5s ease-out;
+        }
+
+        .equipment-card:hover {
+            animation: glow 2s ease-in-out infinite;
+        }
+
+        /* 滚动条美化 */
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: rgba(0,0,0,0.2);
+            border-radius: 4px;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: rgba(255,215,0,0.3);
+            border-radius: 4px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: rgba(255,215,0,0.5);
+        }
+
+        /* 打印样式 */
+        @media print {
+            body { background: #fff; color: #000; }
+            .header { background: #f0f0f0; }
+            .equipment-card { 
+                background: #fff; 
+                border: 1px solid #ddd; 
+                break-inside: avoid;
+            }
+            .control-bar, .tier-tabs, .modal { display: none; }
+        }
+    </style>
+</head>
+<body>
+    <header class="header">
+        <h1>⚔️ 3D MOBA 装备图鉴 ⚔️</h1>
+        <p>游戏装备系统设计文档 - 便于团队协作与讨论</p>
+        <span class="version-tag">📋 v1.0 设计稿</span>
+    </header>
+
+    <div class="container">
+        <!-- 控制栏 -->
+        <div class="control-bar">
+            <input type="text" class="search-box" placeholder="🔍 搜索装备名称..." id="searchInput">
+            
+            <div class="filter-group">
+                <label>分类筛选:</label>
+                <button class="filter-btn active" data-filter="all">全部</button>
+                <button class="filter-btn" data-filter="physical">⚔️ 物理</button>
+                <button class="filter-btn" data-filter="magic">🔮 法术</button>
+                <button class="filter-btn" data-filter="defense">🛡️ 防御</button>
+                <button class="filter-btn" data-filter="special">✨ 特殊</button>
+            </div>
+        </div>
+
+        <!-- 统计信息 -->
+        <div class="stats-bar" id="statsBar">
+            <div class="stat-item">
+                <div class="stat-value" id="totalCount">0</div>
+                <div class="stat-label">总装备数</div>
+            </div>
+            <div class="stat-item">
+                <div class="stat-value" id="tierCount">0</div>
+                <div class="stat-label">当前等级装备数</div>
+            </div>
+            <div class="stat-item">
+                <div class="stat-value" id="categoryCount">0</div>
+                <div class="stat-label">当前筛选装备数</div>
+            </div>
+        </div>
+
+        <!-- 等级标签 -->
+        <div class="tier-tabs">
+            <button class="tier-tab tier-1 active" data-tier="1">
+                <span>🔹</span> 一级装备
+            </button>
+            <button class="tier-tab tier-2" data-tier="2">
+                <span>🔷</span> 二级装备
+            </button>
+            <button class="tier-tab tier-3" data-tier="3">
+                <span>💎</span> 三级装备
+            </button>
+        </div>
+
+        <!-- 装备展示区 -->
+        <div id="equipmentContainer"></div>
+    </div>
+
+    <!-- 详情弹窗 -->
+    <div class="modal" id="detailModal">
+        <div class="modal-content">
+            <div class="modal-close" onclick="closeModal()">&times;</div>
+            <div id="modalBody"></div>
+        </div>
+    </div>
+
+    <!-- 页脚 -->
+    <footer class="footer">
+        <p>3D MOBA Game Equipment System Design | 内部设计文档</p>
+    </footer>
+
+    <script>
+        // 装备数据
+        const equipmentData = {
+            tier1: {
+                physical: [
+                    { icon: "⚔️", name: "重剑无锋", price: 1200, stats: ["+40 攻击力"], passive: "", crafting: [] },
+                    { icon: "🔨", name: "战锤", price: 850, stats: ["+25 攻击力"], passive: "", crafting: [] },
+                    { icon: "🗡️", name: "匕首", price: 300, stats: ["+10 攻击力"], passive: "", crafting: [] },
+                    { icon: "🪓", name: "暴击斧", price: 600, stats: ["+15% 暴击率"], passive: "", crafting: [] },
+                    { icon: "🏹", name: "短弓", price: 300, stats: ["+10% 攻速"], passive: "", crafting: [] }
+                ],
+                magic: [
+                    { icon: "💎", name: "法力水晶", price: 300, stats: ["+200 法力值"], passive: "", crafting: [] },
+                    { icon: "🔮", name: "魔能水晶", price: 300, stats: ["+15 法术强度"], passive: "", crafting: [] },
+                    { icon: "🧿", name: "魔能符石", price: 700, stats: ["+35 法术强度"], passive: "", crafting: [] },
+                    { icon: "🪄", name: "魔能法杖", price: 1200, stats: ["+60 法术强度"], passive: "", crafting: [] },
+                    { icon: "📿", name: "法力护符", price: 200, stats: ["+40% 基础法力回复"], passive: "", crafting: [] }
+                ],
+                defense: [
+                    { icon: "❤️", name: "生命水晶", price: 300, stats: ["+110 血量"], passive: "", crafting: [] },
+                    { icon: "👕", name: "基础布甲", price: 300, stats: ["+15 护甲"], passive: "", crafting: [] },
+                    { icon: "🛡️", name: "御魔石", price: 300, stats: ["+15 魔法抗性"], passive: "", crafting: [] },
+                    { icon: "💚", name: "生命护符", price: 200, stats: ["+80% 基础生命回复"], passive: "", crafting: [] }
+                ],
+                special: [
+                    { icon: "⚡", name: "突击之刃(小跳刀)", price: 1350, stats: [], passive: "主动：向目标区域闪烁500码，冷却40s", crafting: [] },
+                    { icon: "👻", name: "灵魂护符", price: 300, stats: ["+70 血量"], passive: "", crafting: [] },
+                    { icon: "👟", name: "草鞋", price: 300, stats: ["+25 移速"], passive: "", crafting: [] }
+                ]
+            },
+            tier2: {
+                physical: [
+                    { icon: "🗡️", name: "小穿甲刀", price: 1750, stats: ["+35 攻击力", "+15% 护甲穿透"], passive: "", crafting: ["战锤", "匕首"] },
+                    { icon: "🪝", name: "吸血镰刀", price: 800, stats: ["+15 攻击力", "+5% 物理吸血"], passive: "", crafting: ["匕首"] },
+                    { icon: "🏹", name: "狂热长弓", price: 1200, stats: ["+15% 暴击率", "+15% 攻速"], passive: "", crafting: ["暴击斧", "短弓"] },
+                    { icon: "🔨", name: "尖刺钉锤", price: 1300, stats: ["+30 攻击力", "+15 护甲穿透"], passive: "", crafting: ["匕首", "战锤"] },
+                    { icon: "🗡️", name: "碎心匕首", price: 1100, stats: ["+20 攻击力", "+10 护甲穿透", "+8% 冷却"], passive: "", crafting: ["匕首", "匕首"] },
+                    { icon: "🏹", name: "速射弩", price: 850, stats: ["+25% 攻速"], passive: "", crafting: ["短弓", "短弓"] }
+                ],
+                magic: [
+                    { icon: "🪄", name: "破魔法杖", price: 1000, stats: ["+20 法术强度", "+15% 法术穿透"], passive: "", crafting: ["魔能水晶"] },
+                    { icon: "☠️", name: "瘟疫水晶", price: 1000, stats: ["+20 法术强度", "+150 血量"], passive: "造成魔法伤害时，附加重伤效果", crafting: ["魔能水晶", "生命水晶"] },
+                    { icon: "💠", name: "愈合水晶", price: 850, stats: ["+15 法术强度", "+250 法力值"], passive: "击杀小兵回复30法力(CD10s)，击杀英雄回复3倍", crafting: ["魔能水晶", "法力水晶"] },
+                    { icon: "📖", name: "加速之书", price: 800, stats: ["+20 法术强度", "+10% 冷却减缩"], passive: "", crafting: ["魔能水晶"] }
+                ],
+                defense: [
+                    { icon: "🦺", name: "锻造盔甲", price: 850, stats: ["+40 护甲"], passive: "", crafting: ["基础布甲", "基础布甲"] },
+                    { icon: "💎", name: "复苏宝石", price: 1100, stats: ["+20 护甲", "+200 生命值", "+100% 基础生命回复"], passive: "", crafting: ["基础布甲", "生命水晶", "生命护符"] },
+                    { icon: "🔷", name: "御魔水晶", price: 850, stats: ["+25 魔法抗性", "+200 血量"], passive: "", crafting: ["御魔石", "生命水晶"] },
+                    { icon: "❄️", name: "冷却水晶", price: 800, stats: ["+180 生命值", "+8% 冷却减缩"], passive: "", crafting: ["生命水晶"] }
+                ]
+            },
+            tier3: {
+                physical: [
+                    { icon: "🪓", name: "狂怒战斧", price: 3250, stats: ["+65 攻击", "+20% 暴击"], passive: "暴击伤害提升25%", crafting: ["重剑无锋", "战锤", "暴击斧"] },
+                    { icon: "💣", name: "穿甲弹丸", price: 2800, stats: ["+40 攻击力", "+30% 护甲穿透", "+20% 暴击率"], passive: "攻击时伤害根据对方额外护甲提升2-10%", crafting: ["小穿甲刀", "暴击斧"] },
+                    { icon: "🩸", name: "嗜血镰刀", price: 3300, stats: ["+50 攻击力", "+12% 物理吸血"], passive: "增加20%物理技能吸血", crafting: ["重剑无锋", "吸血镰刀"] },
+                    { icon: "🏹", name: "狂热弩箭", price: 2600, stats: ["+25% 暴击率", "+25 攻击力", "+20% 攻速"], passive: "每次攻击移速短暂提升15点(持续2s)", crafting: ["狂热长弓", "战锤"] },
+                    { icon: "⚔️", name: "切割者", price: 2900, stats: ["+40 攻击力", "+10% 冷却", "+200 生命"], passive: "每次物理攻击使目标护甲下降8%，最高叠加5层", crafting: ["战锤", "冷却水晶", "生命水晶"] },
+                    { icon: "🗡️", name: "黯星匕首", price: 2700, stats: ["+50 攻击力", "+30 护甲穿透", "+10% 冷却"], passive: "脱战10s后获得额外移速25点", crafting: ["尖刺钉锤", "碎心匕首"] }
+                ],
+                magic: [
+                    { icon: "🪄", name: "破魔法杖", price: 2700, stats: ["+60 法术强度", "+30% 法术穿透"], passive: "", crafting: ["破魔法杖(二级)", "魔能符石"] },
+                    { icon: "🔮", name: "恐怖法杖", price: 3400, stats: ["+120 法术强度"], passive: "获得额外15%法术强度", crafting: ["魔能法杖", "魔能符石"] },
+                    { icon: "☠️", name: "瘟疫魔杖", price: 2200, stats: ["+60 法术强度", "+200 血量"], passive: "造成魔法伤害附加毒伤(每秒2%目标血量)和重伤", crafting: ["瘟疫水晶", "魔能符石"] },
+                    { icon: "⚖️", name: "调和法杖", price: 2300, stats: ["+55 法术强度", "+300 法力值"], passive: "击杀小兵回复10%法力(CD10s)，击杀英雄回复2倍", crafting: ["愈合水晶", "加速之书"] },
+                    { icon: "✨", name: "附魔法刃", price: 2100, stats: ["+45 法术强度", "+20% 攻速"], passive: "普攻附带法术伤害", crafting: ["魔能符石", "短弓"] }
+                ],
+                defense: [
+                    { icon: "🌵", name: "荆棘之甲", price: 2800, stats: ["+80 护甲", "+400 生命"], passive: "被普攻时反弹伤害并施加重伤", crafting: ["锻造盔甲", "生命水晶"] },
+                    { icon: "👼", name: "守护天使", price: 3200, stats: ["+45 护甲", "+45 魔抗"], passive: "死亡后4秒后复活，恢复50%血量和蓝量(CD300s)", crafting: ["御魔水晶", "锻造盔甲"] },
+                    { icon: "🛡️", name: "狂徒铠甲", price: 2850, stats: ["+800 生命", "+200% 生命回复"], passive: "脱战后快速回复生命值", crafting: ["复苏宝石", "生命水晶"] },
+                    { icon: "🎭", name: "深渊面具", price: 2900, stats: ["+350 生命", "+60 魔抗", "+10% 冷却"], passive: "附近敌人受到的魔法伤害增加15%", crafting: ["御魔水晶", "冷却水晶"] }
+                ]
+            }
+        };
+
+        let currentTier = 'tier1';
+        let currentFilter = 'all';
+
+        // 计算统计数据
+        function updateStats() {
+            let total = 0;
+            let tierTotal = 0;
+            let categoryTotal = 0;
+
+            for (const [tier, categories] of Object.entries(equipmentData)) {
+                for (const [cat, items] of Object.entries(categories)) {
+                    total += items.length;
+                    if (tier === currentTier) {
+                        tierTotal += items.length;
+                        if (currentFilter === 'all' || currentFilter === cat) {
+                            categoryTotal += items.length;
+                        }
+                    }
+                }
+            }
+
+            document.getElementById('totalCount').textContent = total;
+            document.getElementById('tierCount').textContent = tierTotal;
+            document.getElementById('categoryCount').textContent = categoryTotal;
+        }
+
+        // 渲染装备
+        function renderEquipment() {
+            const container = document.getElementById('equipmentContainer');
+            container.innerHTML = '';
+
+            const tierData = equipmentData[currentTier];
+            let hasContent = false;
+            
+            for (const [category, items] of Object.entries(tierData)) {
+                if (currentFilter !== 'all' && currentFilter !== category) continue;
+                if (items.length === 0) continue;
+
+                hasContent = true;
+                const categoryNames = {
+                    physical: '物理装备',
+                    magic: '法术装备', 
+                    defense: '防御装备',
+                    special: '特殊装备'
+                };
+
+                const categoryIcons = {
+                    physical: '⚔️',
+                    magic: '🔮',
+                    defense: '🛡️',
+                    special: '✨'
+                };
+
+                const categoryTitle = document.createElement('h2');
+                categoryTitle.className = 'category-title';
+                categoryTitle.innerHTML = `<span class="category-icon">${categoryIcons[category]}</span>${categoryNames[category]} <span style="color: #666; font-size: 0.7em;">(${items.length})</span>`;
+                container.appendChild(categoryTitle);
+
+                const grid = document.createElement('div');
+                grid.className = 'equipment-grid';
+
+                items.forEach((item, index) => {
+                    const card = createEquipmentCard(item, category, index);
+                    grid.appendChild(card);
+                });
+
+                container.appendChild(grid);
+            }
+
+            if (!hasContent) {
+                container.innerHTML = `
+                    <div class="empty-state">
+                        <div class="empty-state-icon">📭</div>
+                        <p>该分类下暂无装备</p>
+                    </div>
+                `;
+            }
+
+            updateStats();
+        }
+
+        // 创建装备卡片
+        function createEquipmentCard(item, category, index) {
+            const card = document.createElement('div');
+            card.className = `equipment-card ${category}`;
+            card.style.animationDelay = `${index * 0.05}s`;
+            card.onclick = () => showDetail(item, category);
+
+            const tierNum = currentTier.replace('tier', '');
+            
+            card.innerHTML = `
+                <div class="tier-badge tier-${tierNum}">${tierNum}</div>
+                <div class="card-header">
+                    <div class="equipment-name"><span style="margin-right: 8px; font-size: 1.3em;">${item.icon}</span>${item.name}</div>
+                    <div class="equipment-price">${item.price}💰</div>
+                </div>
+                <div class="equipment-stats">
+                    ${item.stats.map(stat => `
+                        <div class="stat-row">
+                            <span class="stat-icon">📊</span>
+                            <span>${stat}</span>
+                        </div>
+                    `).join('')}
+                </div>
+                ${item.passive ? `
+                    <div class="equipment-passive">
+                        <strong>被动:</strong> ${item.passive}
+                    </div>
+                ` : ''}
+                ${item.crafting.length > 0 ? `
+                    <div class="crafting-path">
+                        <div class="crafting-title">🔨 合成材料:</div>
+                        <div class="crafting-items">
+                            ${item.crafting.map(c => {
+                                const materialInfo = findEquipment(c);
+                                const materialTier = materialInfo ? materialInfo.tier.replace('tier', '') : '?';
+                                return `<span class="crafting-item" onclick="event.stopPropagation(); showMaterialDetail('${c}')">${c} <span style="color: #ffd700; font-weight: bold;">[${materialTier}]</span></span>`;
+                            }).join('')}
+                        </div>
+                    </div>
+                ` : ''}
+            `;
+
+            return card;
+        }
+
+        // 查找装备
+        function findEquipment(name) {
+            for (const [tier, categories] of Object.entries(equipmentData)) {
+                for (const [cat, items] of Object.entries(categories)) {
+                    const found = items.find(item => item.name === name);
+                    if (found) {
+                        return { item: found, category: cat, tier: tier };
+                    }
+                }
+            }
+            return null;
+        }
+
+        // 显示材料详情
+        function showMaterialDetail(materialName) {
+            const found = findEquipment(materialName);
+            if (found) {
+                showDetail(found.item, found.category);
+            } else {
+                // 如果找不到，显示提示
+                alert(`未找到装备 "${materialName}" 的详细信息`);
+            }
+        }
+
+        // 显示详情
+        function showDetail(item, category) {
+            const modal = document.getElementById('detailModal');
+            const body = document.getElementById('modalBody');
+            
+            const categoryColors = {
+                physical: '#ff6b6b',
+                magic: '#4fc3f7',
+                defense: '#69f0ae',
+                special: '#ffd700'
+            };
+
+            const categoryNames = {
+                physical: '物理装备',
+                magic: '法术装备',
+                defense: '防御装备',
+                special: '特殊装备'
+            };
+
+            body.innerHTML = `
+                <div style="margin-bottom: 25px;">
+                    <span style="display: inline-block; padding: 5px 15px; background: ${categoryColors[category]}20; border: 1px solid ${categoryColors[category]}; border-radius: 20px; color: ${categoryColors[category]}; font-size: 0.9em; margin-bottom: 15px;">
+                        ${categoryNames[category]}
+                    </span>
+                    <h2 style="color: ${categoryColors[category]}; font-size: 2em; margin-bottom: 10px;"><span style="margin-right: 10px;">${item.icon}</span>${item.name}</h2>
+                    <div style="font-size: 1.8em; color: #ffd700; font-weight: bold;">💰 ${item.price}</div>
+                </div>
+                
+                <div style="margin-bottom: 25px;">
+                    <h3 style="color: #888; margin-bottom: 15px; font-size: 1.1em;">📊 属性加成</h3>
+                    <div style="background: rgba(255,255,255,0.05); padding: 15px; border-radius: 10px;">
+                        ${item.stats.length > 0 ? item.stats.map(s => `
+                            <div style="padding: 8px 0; border-bottom: 1px solid rgba(255,255,255,0.1); display: flex; align-items: center; gap: 10px;">
+                                <span style="color: ${categoryColors[category]};">▸</span>
+                                <span>${s}</span>
+                            </div>
+                        `).join('') : '<div style="color: #666;">无基础属性</div>'}
+                    </div>
+                </div>
+
+                ${item.passive ? `
+                    <div style="background: linear-gradient(135deg, rgba(255,215,0,0.1), rgba(255,107,107,0.1)); padding: 20px; border-radius: 12px; margin-bottom: 25px; border-left: 4px solid #ffd700;">
+                        <h3 style="color: #ffd700; margin-bottom: 10px; font-size: 1.1em;">✨ 被动效果</h3>
+                        <p style="line-height: 1.6; color: #ddd;">${item.passive}</p>
+                    </div>
+                ` : ''}
+
+                <div>
+                    <h3 style="color: #888; margin-bottom: 15px; font-size: 1.1em;">🔨 合成路径</h3>
+                    ${item.crafting.length > 0 ? `
+                        <div style="display: flex; flex-wrap: wrap; gap: 10px;">
+                            ${item.crafting.map(c => {
+                                const materialInfo = findEquipment(c);
+                                const materialTier = materialInfo ? materialInfo.tier.replace('tier', '') : '?';
+                                return `
+                                    <span onclick="showMaterialDetail('${c}')" style="background: rgba(255,255,255,0.1); padding: 10px 18px; border-radius: 20px; border: 1px solid rgba(255,255,255,0.2); transition: all 0.2s; cursor: pointer; display: flex; align-items: center; gap: 8px;" onmouseover="this.style.background='rgba(255,215,0,0.2)';this.style.borderColor='rgba(255,215,0,0.5)'" onmouseout="this.style.background='rgba(255,255,255,0.1)';this.style.borderColor='rgba(255,255,255,0.2)'">
+                                        ${c}
+                                        <span style="background: ${materialTier === '1' ? '#666' : materialTier === '2' ? '#4fc3f7' : '#ffd700'}; color: ${materialTier === '3' ? '#000' : '#fff'}; padding: 2px 8px; border-radius: 10px; font-size: 0.75em; font-weight: bold;">${materialTier}</span>
+                                    </span>
+                                `;
+                            }).join('')}
+                        </div>
+                    ` : '<div style="color: #666; padding: 15px; background: rgba(255,255,255,0.05); border-radius: 10px;">🏁 基础装备，无需合成</div>'}
+                </div>
+            `;
+            
+            modal.classList.add('active');
+            document.body.style.overflow = 'hidden';
+        }
+
+        function closeModal() {
+            document.getElementById('detailModal').classList.remove('active');
+            document.body.style.overflow = '';
+        }
+
+        // 事件监听
+        document.querySelectorAll('.tier-tab').forEach(tab => {
+            tab.addEventListener('click', () => {
+                document.querySelectorAll('.tier-tab').forEach(t => t.classList.remove('active'));
+                tab.classList.add('active');
+                currentTier = 'tier' + tab.dataset.tier;
+                renderEquipment();
+            });
+        });
+
+        document.querySelectorAll('.filter-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+                currentFilter = btn.dataset.filter;
+                renderEquipment();
+            });
+        });
+
+        // 搜索功能
+        document.getElementById('searchInput').addEventListener('input', (e) => {
+            const searchTerm = e.target.value.toLowerCase();
+            const cards = document.querySelectorAll('.equipment-card');
+            const titles = document.querySelectorAll('.category-title');
+            
+            cards.forEach(card => {
+                const name = card.querySelector('.equipment-name').textContent.toLowerCase();
+                if (name.includes(searchTerm)) {
+                    card.style.display = 'block';
+                } else {
+                    card.style.display = 'none';
+                }
+            });
+
+            // 隐藏没有可见卡片的分类标题
+            titles.forEach(title => {
+                const grid = title.nextElementSibling;
+                const visibleCards = grid.querySelectorAll('.equipment-card[style="display: block;"], .equipment-card:not([style*="display: none"])');
+                title.style.display = visibleCards.length === 0 && searchTerm !== '' ? 'none' : 'flex';
+            });
+        });
+
+        // 点击模态框外部关闭
+        document.getElementById('detailModal').addEventListener('click', (e) => {
+            if (e.target.id === 'detailModal') {
+                closeModal();
+            }
+        });
+
+        // ESC键关闭
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') {
+                closeModal();
+            }
+        });
+
+        // 初始化
+        renderEquipment();
+    </script>
+</body>
+</html>
